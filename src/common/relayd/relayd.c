@@ -78,7 +78,7 @@ static int send_command(struct lttcomm_relayd_sock *rsock,
 		goto error;
 	}
 
-	DBG3("Relayd sending command %d of size %" PRIu64, cmd, buf_size);
+	DBG("Relayd sending command %d of size %" PRIu64, cmd, buf_size);
 
 error:
 	free(buf);
@@ -98,7 +98,7 @@ static int recv_reply(struct lttcomm_relayd_sock *rsock, void *data, size_t size
 		return -ECONNRESET;
 	}
 
-	DBG3("Relayd waiting for reply of size %zu", size);
+	DBG("Relayd waiting for reply of size %zu", size);
 
 	ret = rsock->sock.ops->recvmsg(&rsock->sock, data, size, 0);
 	if (ret <= 0 || ret != size) {
@@ -421,7 +421,7 @@ int relayd_version_check(struct lttcomm_relayd_sock *rsock)
 	if (msg.major != rsock->major) {
 		/* Not compatible */
 		ret = -1;
-		DBG2("Relayd version is NOT compatible. Relayd version %u != %u (us)",
+		DBG("Relayd version is NOT compatible. Relayd version %u != %u (us)",
 				msg.major, rsock->major);
 		goto error;
 	}
@@ -436,7 +436,7 @@ int relayd_version_check(struct lttcomm_relayd_sock *rsock)
 	}
 
 	/* Version number compatible */
-	DBG2("Relayd version is compatible, using protocol version %u.%u",
+	DBG("Relayd version is compatible, using protocol version %u.%u",
 			rsock->major, rsock->minor);
 	ret = 0;
 
@@ -464,7 +464,7 @@ int relayd_send_metadata(struct lttcomm_relayd_sock *rsock, size_t len)
 		goto error;
 	}
 
-	DBG2("Relayd metadata added successfully");
+	DBG("Relayd metadata added successfully");
 
 	/*
 	 * After that call, the metadata data MUST be sent to the relayd so the
@@ -491,7 +491,7 @@ int relayd_connect(struct lttcomm_relayd_sock *rsock)
 		return -ECONNRESET;
 	}
 
-	DBG3("Relayd connect ...");
+	DBG("Relayd connect ...");
 
 	return rsock->sock.ops->connect(&rsock->sock);
 }
@@ -522,7 +522,7 @@ int relayd_close(struct lttcomm_relayd_sock *rsock)
 		goto end;
 	}
 
-	DBG3("Relayd closing socket %d", rsock->sock.fd);
+	DBG("Relayd closing socket %d", rsock->sock.fd);
 
 	if (rsock->sock.ops) {
 		ret = rsock->sock.ops->close(&rsock->sock);
@@ -555,7 +555,7 @@ int relayd_send_data_hdr(struct lttcomm_relayd_sock *rsock,
 		return -ECONNRESET;
 	}
 
-	DBG3("Relayd sending data header of size %zu", size);
+	DBG("Relayd sending data header of size %zu", size);
 
 	/* Again, safety net */
 	if (size == 0) {

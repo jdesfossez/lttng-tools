@@ -173,7 +173,7 @@ static struct lttng_consumer_stream *allocate_stream(int cpu, int key,
 			 * We could not find the channel. Can happen if cpu hotplug
 			 * happens while tearing down.
 			 */
-			DBG3("Could not find channel");
+			DBG("Could not find channel");
 			break;
 		case -ENOMEM:
 		case -EINVAL:
@@ -450,7 +450,7 @@ static int create_ust_channel(struct lttng_consumer_channel *channel,
 	assert(attr);
 	assert(ust_chanp);
 
-	DBG3("Creating channel to ustctl with attr: [overwrite: %d, "
+	DBG("Creating channel to ustctl with attr: [overwrite: %d, "
 			"subbuf_size: %" PRIu64 ", num_subbuf: %" PRIu64 ", "
 			"switch_timer_interval: %u, read_timer_interval: %u, "
 			"output: %d, type: %d", attr->overwrite, attr->subbuf_size,

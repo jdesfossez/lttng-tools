@@ -603,7 +603,7 @@ struct lttng_consumer_stream *consumer_allocate_stream(uint64_t channel_key,
 	/* Init session id node with the stream session id */
 	lttng_ht_node_init_u64(&stream->node_session_id, stream->session_id);
 
-	DBG3("Allocated stream %s (key %" PRIu64 ", chan_key %" PRIu64
+	DBG("Allocated stream %s (key %" PRIu64 ", chan_key %" PRIu64
 			" relayd_id %" PRIu64 ", session_id %" PRIu64,
 			stream->name, stream->key, channel_key,
 			stream->net_seq_idx, stream->session_id);
@@ -632,7 +632,7 @@ int consumer_add_data_stream(struct lttng_consumer_stream *stream)
 	assert(stream);
 	assert(ht);
 
-	DBG3("Adding consumer stream %" PRIu64, stream->key);
+	DBG("Adding consumer stream %" PRIu64, stream->key);
 
 	pthread_mutex_lock(&consumer_data.lock);
 	pthread_mutex_lock(&stream->chan->lock);
@@ -1471,7 +1471,7 @@ static int write_relayd_metadata_id(int fd,
 		if (errno != EPIPE) {
 			PERROR("write metadata stream id");
 		}
-		DBG3("Consumer failed to write relayd metadata id (errno: %d)", errno);
+		DBG("Consumer failed to write relayd metadata id (errno: %d)", errno);
 		/*
 		 * Set ret to a negative value because if ret != sizeof(hdr), we don't
 		 * handle writting the missing part so report that as an error and
@@ -2048,7 +2048,7 @@ void consumer_del_metadata_stream(struct lttng_consumer_stream *stream,
 	 */
 	assert(stream->metadata_flag);
 
-	DBG3("Consumer delete metadata stream %d", stream->wait_fd);
+	DBG("Consumer delete metadata stream %d", stream->wait_fd);
 
 	pthread_mutex_lock(&consumer_data.lock);
 	pthread_mutex_lock(&stream->chan->lock);
@@ -2108,7 +2108,7 @@ int consumer_add_metadata_stream(struct lttng_consumer_stream *stream)
 	assert(stream);
 	assert(ht);
 
-	DBG3("Adding metadata stream %" PRIu64 " to hash table", stream->key);
+	DBG("Adding metadata stream %" PRIu64 " to hash table", stream->key);
 
 	pthread_mutex_lock(&consumer_data.lock);
 	pthread_mutex_lock(&stream->chan->lock);
