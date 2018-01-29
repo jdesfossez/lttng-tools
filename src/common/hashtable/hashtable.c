@@ -471,6 +471,7 @@ int lttng_ht_del(struct lttng_ht *ht, struct lttng_ht_iter *iter)
 	/* RCU read lock protects from ABA. */
 	rcu_read_lock();
 	ret = cds_lfht_del(ht->ht, iter->iter.node);
+	DBG("cds_lfht_del ret: %d", ret);
 	rcu_read_unlock();
 	return ret;
 }

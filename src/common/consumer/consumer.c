@@ -162,9 +162,12 @@ static void clean_channel_stream_list(struct lttng_consumer_channel *channel)
 
 	assert(channel);
 
+	DBG("Clean channel stream list");
+
 	/* Delete streams that might have been left in the stream list. */
 	cds_list_for_each_entry_safe(stream, stmp, &channel->streams.head,
 			send_node) {
+		DBG("Remove stream %" PRIu64 " from channel list", stream->key);
 		cds_list_del(&stream->send_node);
 		/*
 		 * Once a stream is added to this list, the buffers were created so we
@@ -284,6 +287,8 @@ static void free_channel_rcu(struct rcu_head *head)
 		caa_container_of(head, struct lttng_ht_node_u64, head);
 	struct lttng_consumer_channel *channel =
 		caa_container_of(node, struct lttng_consumer_channel, node);
+
+	DBG("free_channel_rcu, channel %" PRIu64, channel->key);
 
 	switch (consumer_data.type) {
 	case LTTNG_CONSUMER_KERNEL:
@@ -527,11 +532,13 @@ void consumer_del_stream(struct lttng_consumer_stream *stream,
  */
 void consumer_del_stream_for_data(struct lttng_consumer_stream *stream)
 {
+	DBG("Consumer del stream for data");
 	consumer_stream_destroy(stream, data_ht);
 }
 
 void consumer_del_stream_for_metadata(struct lttng_consumer_stream *stream)
 {
+	DBG("Consumer del stream for metadata");
 	consumer_stream_destroy(stream, metadata_ht);
 }
 
@@ -887,6 +894,8 @@ static int write_relayd_stream_header(struct lttng_consumer_stream *stream,
 	assert(stream);
 	assert(relayd);
 
+	DBG("Write relayd stream header, key: %" PRIu64, stream->key);
+
 	/* Reset data header */
 	memset(&data_hdr, 0, sizeof(data_hdr));
 
@@ -1190,6 +1199,9 @@ void lttng_consumer_cleanup(void)
 {
 	struct lttng_ht_iter iter;
 	struct lttng_consumer_channel *channel;
+	struct lttng_consumer_stream *stream;
+
+	DBG("Consumer cleanup begin");
 
 	rcu_read_lock();
 
@@ -1204,14 +1216,34 @@ void lttng_consumer_cleanup(void)
 
 	cleanup_relayd_ht();
 
+	/*
+	 * Check if we are leaking streams in the HT.
+	 */
+	cds_lfht_for_each_entry(consumer_data.stream_per_chan_id_ht->ht, &iter.iter,
+			stream, node_channel_id.node) {
+		ERR("Stream %" PRIu64 " still present in stream_per_chan_id_ht HT, "
+				"monitor: %u, globally_visible: %u",
+				stream->key, stream->monitor, stream->globally_visible);
+	}
 	lttng_ht_destroy(consumer_data.stream_per_chan_id_ht);
 
+	/*
+	 * Check if we are leaking streams in the HT.
+	 */
+	cds_lfht_for_each_entry(consumer_data.stream_list_ht->ht, &iter.iter,
+			stream, node_session_id.node) {
+		ERR("Stream %" PRIu64 " still present in stream_per_chan_id_ht HT, "
+				"monitor: %u, globally_visible: %u",
+				stream->key, stream->monitor, stream->globally_visible);
+	}
 	/*
 	 * This HT contains streams that are freed by either the metadata thread or
 	 * the data thread so we do *nothing* on the hash table and simply destroy
 	 * it.
 	 */
 	lttng_ht_destroy(consumer_data.stream_list_ht);
+
+	DBG("Consumer cleanup end");
 }
 
 /*
@@ -1372,6 +1404,8 @@ static void destroy_data_stream_ht(struct lttng_ht *ht)
 	struct lttng_ht_iter iter;
 	struct lttng_consumer_stream *stream;
 
+	DBG("Destroy data stream HT %p", ht);
+
 	if (ht == NULL) {
 		return;
 	}
@@ -1397,6 +1431,8 @@ static void destroy_metadata_stream_ht(struct lttng_ht *ht)
 {
 	struct lttng_ht_iter iter;
 	struct lttng_consumer_stream *stream;
+
+	DBG("Destroy metadata stream HT %p", ht);
 
 	if (ht == NULL) {
 		return;
@@ -1447,6 +1483,8 @@ void lttng_consumer_destroy(struct lttng_consumer_local_data *ctx)
 
 	unlink(ctx->consumer_command_sock_path);
 	free(ctx);
+
+	DBG("Consumer destroy done");
 }
 
 /*
@@ -1512,6 +1550,8 @@ ssize_t lttng_consumer_on_read_subbuffer_mmap(
 	int outfd = stream->out_fd;
 	struct consumer_relayd_sock_pair *relayd = NULL;
 	unsigned int relayd_hang_up = 0;
+
+	DBG("Consumer read subbuffer mmap");
 
 	/* RCU lock for the relayd pointer */
 	rcu_read_lock();
@@ -1731,6 +1771,8 @@ ssize_t lttng_consumer_on_read_subbuffer_splice(
 	struct consumer_relayd_sock_pair *relayd = NULL;
 	int *splice_pipe;
 	unsigned int relayd_hang_up = 0;
+
+	DBG("Consumer read subbuffer splice");
 
 	switch (consumer_data.type) {
 	case LTTNG_CONSUMER_KERNEL:
@@ -2378,6 +2420,8 @@ restart:
 
 				/* It's ok to have an unavailable sub-buffer */
 				if (len < 0 && len != -EAGAIN && len != -ENODATA) {
+					ERR("Error with ready metadata buffer on stream %" PRIu64,
+							stream->key);
 					/* Clean up stream from consumer and free it. */
 					lttng_poll_del(&events, stream->wait_fd);
 					consumer_del_metadata_stream(stream, metadata_ht);
@@ -2602,6 +2646,8 @@ void *consumer_thread_data_poll(void *data)
 				len = ctx->on_buffer_ready(local_stream[i], ctx);
 				/* it's ok to have an unavailable sub-buffer */
 				if (len < 0 && len != -EAGAIN && len != -ENODATA) {
+					ERR("Error with ready buffer on stream %" PRIu64,
+							local_stream[i]->key);
 					/* Clean the stream and free it. */
 					consumer_del_stream(local_stream[i], data_ht);
 					local_stream[i] = NULL;
@@ -2634,6 +2680,8 @@ void *consumer_thread_data_poll(void *data)
 				/* it's ok to have an unavailable sub-buffer */
 				if (len < 0 && len != -EAGAIN && len != -ENODATA) {
 					/* Clean the stream and free it. */
+					ERR("Error with ready buffer on stream %" PRIu64,
+							local_stream[i]->key);
 					consumer_del_stream(local_stream[i], data_ht);
 					local_stream[i] = NULL;
 				} else if (len > 0) {
@@ -2782,8 +2830,11 @@ static void destroy_channel_ht(struct lttng_ht *ht)
 		return;
 	}
 
+	DBG("Consumer destroy channel ht");
+
 	rcu_read_lock();
 	cds_lfht_for_each_entry(ht->ht, &iter.iter, channel, wait_fd_node.node) {
+		DBG("Consumer destroy channel ht key %" PRIu64, channel->key);
 		ret = lttng_ht_del(ht, &iter);
 		assert(ret != 0);
 	}
@@ -2925,6 +2976,8 @@ restart:
 							ERR("UST consumer get channel key %" PRIu64 " not found for del channel", key);
 							break;
 						}
+						DBG("Consumer channel del command, key: %" PRIu64,
+								chan->key);
 						lttng_poll_del(&events, chan->wait_fd);
 						iter.iter.node = &chan->wait_fd_node.node;
 						ret = lttng_ht_del(channel_ht, &iter);
@@ -3012,6 +3065,8 @@ restart:
 				/* Release our own refcount */
 				if (!uatomic_sub_return(&chan->refcount, 1)
 						&& !uatomic_read(&chan->nb_init_stream_left)) {
+					DBG("Last reference on channel %" PRIu64 " released, deleting channel",
+							chan->key);
 					consumer_del_channel(chan);
 				}
 			} else {

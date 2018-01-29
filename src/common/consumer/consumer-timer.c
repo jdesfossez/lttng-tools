@@ -460,6 +460,8 @@ void consumer_timer_switch_stop(struct lttng_consumer_channel *channel)
 
 	assert(channel);
 
+	DBG("Stop consumer switch timer on channel %" PRIu64, channel->key);
+
 	ret = timer_delete(channel->switch_timer);
 	if (ret == -1) {
 		PERROR("timer_delete");
@@ -516,6 +518,8 @@ void consumer_timer_live_stop(struct lttng_consumer_channel *channel)
 	int ret;
 
 	assert(channel);
+
+	DBG("Consumer live timer stop on channel %" PRIu64, channel->key);
 
 	ret = timer_delete(channel->live_timer);
 	if (ret == -1) {

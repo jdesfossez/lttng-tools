@@ -1997,6 +1997,7 @@ void lttng_ustconsumer_on_stream_hangup(struct lttng_consumer_stream *stream)
 
 	pthread_mutex_lock(&stream->lock);
 	if (!stream->quiescent) {
+		DBG("Stream flush on hangup, key: %" PRIu64, stream->key);
 		ustctl_flush_buffer(stream->ustream, 0);
 		stream->quiescent = true;
 	}
@@ -2010,6 +2011,8 @@ void lttng_ustconsumer_del_channel(struct lttng_consumer_channel *chan)
 
 	assert(chan);
 	assert(chan->uchan);
+
+	DBG("UST consumer del channel %" PRIu64, chan->key);
 
 	if (chan->switch_timer_enabled == 1) {
 		consumer_timer_switch_stop(chan);
@@ -2041,6 +2044,7 @@ void lttng_ustconsumer_free_channel(struct lttng_consumer_channel *chan)
 	assert(chan);
 	assert(chan->uchan);
 
+	DBG("UST consumer free channel %" PRIu64, chan->key);
 	consumer_metadata_cache_destroy(chan);
 	ustctl_destroy_channel(chan->uchan);
 	/* Try to rmdir all directories under shm_path root. */
@@ -2055,6 +2059,8 @@ void lttng_ustconsumer_del_stream(struct lttng_consumer_stream *stream)
 {
 	assert(stream);
 	assert(stream->ustream);
+
+	DBG("UST consumer del stream %" PRIu64, stream->key);
 
 	if (stream->chan->switch_timer_enabled == 1) {
 		consumer_timer_switch_stop(stream->chan);
@@ -2284,6 +2290,7 @@ int lttng_ustconsumer_sync_metadata(struct lttng_consumer_local_data *ctx,
 	}
 
 end:
+	DBG("UST consumer sync metadata ret: %d", ret);
 	return ret;
 }
 
@@ -2572,10 +2579,13 @@ retry:
 	assert(!stream->metadata_flag);
 	err = consumer_stream_write_index(stream, &index);
 	if (err < 0) {
+		DBG("Consumer stream write index error, ret: %ld", ret);
 		goto end;
 	}
 
 end:
+	DBG("Out UST read_subbuffer, stream %" PRIu64 ", ret: %ld",
+			stream->key, ret);
 	return ret;
 }
 

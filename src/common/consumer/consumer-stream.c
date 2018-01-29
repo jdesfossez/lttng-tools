@@ -42,6 +42,8 @@ static void free_stream_rcu(struct rcu_head *head)
 	struct lttng_consumer_stream *stream =
 		caa_container_of(node, struct lttng_consumer_stream, node);
 
+	DBG("Free stream RCU, key: %" PRIu64, stream->key);
+
 	pthread_mutex_destroy(&stream->lock);
 	free(stream);
 }
@@ -60,6 +62,8 @@ void consumer_stream_relayd_close(struct lttng_consumer_stream *stream,
 
 	assert(stream);
 	assert(relayd);
+
+	DBG("Consumer close stream %" PRIu64 " on relayd", stream->key);
 
 	if (stream->sent_to_relayd) {
 		uatomic_dec(&relayd->refcount);
@@ -103,6 +107,8 @@ void consumer_stream_close(struct lttng_consumer_stream *stream)
 	struct consumer_relayd_sock_pair *relayd;
 
 	assert(stream);
+
+	DBG("Consumer stream %" PRIu64 " close", stream->key);
 
 	switch (consumer_data.type) {
 	case LTTNG_CONSUMER_KERNEL:
@@ -193,6 +199,8 @@ void consumer_stream_delete(struct lttng_consumer_stream *stream,
 	/* Should NEVER be called not in monitor mode. */
 	assert(stream->chan->monitor);
 
+	DBG("Consumer stream %" PRIu64 " delete", stream->key);
+
 	rcu_read_lock();
 
 	if (ht) {
@@ -222,6 +230,7 @@ void consumer_stream_delete(struct lttng_consumer_stream *stream,
 		/* Decrement the stream count of the global consumer data. */
 		assert(consumer_data.stream_count > 0);
 		consumer_data.stream_count--;
+		DBG("Consumer stream count: %d", consumer_data.stream_count);
 	}
 }
 
@@ -285,6 +294,8 @@ static struct lttng_consumer_channel *unref_channel(
 	/* Update refcount of channel and see if we need to destroy it. */
 	if (!uatomic_sub_return(&stream->chan->refcount, 1)
 			&& !uatomic_read(&stream->chan->nb_init_stream_left)) {
+		DBG("Last reference on channel %" PRIu64 " released",
+				stream->chan->key);
 		free_chan = stream->chan;
 	}
 
@@ -303,6 +314,9 @@ void consumer_stream_destroy(struct lttng_consumer_stream *stream,
 		struct lttng_ht *ht)
 {
 	assert(stream);
+
+	DBG("Consumer stream %" PRIu64 " destroy, monitor: %u, globally_visible: %u",
+			stream->key, stream->monitor, stream->globally_visible);
 
 	/* Stream is in monitor mode. */
 	if (stream->monitor) {
@@ -340,6 +354,7 @@ void consumer_stream_destroy(struct lttng_consumer_stream *stream,
 		}
 
 		if (free_chan) {
+			DBG("Need to free channel");
 			consumer_del_channel(free_chan);
 		}
 	} else {
@@ -348,6 +363,8 @@ void consumer_stream_destroy(struct lttng_consumer_stream *stream,
 
 	/* Free stream within a RCU call. */
 	consumer_stream_free(stream);
+
+	DBG("Consumer stream destroy done");
 }
 
 /*
@@ -362,6 +379,8 @@ int consumer_stream_write_index(struct lttng_consumer_stream *stream,
 
 	assert(stream);
 	assert(element);
+
+	DBG("Consumer stream write index, key: %" PRIu64, stream->key);
 
 	rcu_read_lock();
 	if (stream->net_seq_idx != (uint64_t) -1ULL) {
